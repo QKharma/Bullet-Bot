@@ -1,5 +1,6 @@
 use serenity::async_trait;
 use serenity::client::{Client, Context, EventHandler};
+use serenity::builder::CreateMessage;
 use serenity::model::channel::Message;
 use serenity::framework::standard::{
   StandardFramework,
@@ -42,7 +43,16 @@ async fn main() {
 
 #[command]
 async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
-  msg.reply(ctx, "Pong!").await?;
+
+  let mut reply = CreateMessage::default();
+  reply
+    .embed(|e| e
+      .colour(0x00ff00)
+      .title("bre")
+      .description("beans")
+    );
+
+  msg.channel_id.send_message(ctx, |_| { &mut reply }).await?;
 
   Ok(())
 }
