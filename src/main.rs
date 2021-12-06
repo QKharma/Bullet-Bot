@@ -69,13 +69,20 @@ async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
   }
 
   let mut fields: Vec<(String,String,bool)> = vec![];
+  let mut task_string = String::from("");
+  //let mut tbd_str: String = String::from("");
   for task in tasks {
-    let tbd = NaiveDateTime::parse_from_str(&task.tbd,"%Y-%m-%dT%H:%M:%S").unwrap();
-    let tbd_str = tbd.format("%d.%m.%Y").to_string();
-    fields.push((task.title,task.description,true));
-    fields.push((String::from("⠀"),tbd_str,true));
-    fields.push((String::from("⠀"),String::from("⠀"),false));
+
+    //let tbd = NaiveDateTime::parse_from_str(&task.tbd,"%Y-%m-%dT%H:%M:%S").unwrap();
+    //tbd_str = tbd.format("%d.%m.%Y").to_string();
+    
+    task_string.push_str("• ");
+    task_string.push_str(&task.title);
+    task_string.push_str("\n");
   }
+
+  fields.push((String::from("Abschnitt"),task_string,true));
+  fields.push((String::from("⠀"),String::from("⠀"),false));
 
   let mut reply = CreateMessage::default();
   reply
