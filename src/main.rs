@@ -13,10 +13,14 @@ use serenity::framework::standard::{
 
 use std::env;
 
-use serde::Deserialize;
+use chrono::{NaiveDateTime};
+use chrono::format::ParseError;
+
+mod models;
+use models::task::Task;
 
 #[group]
-#[commands(ping)]
+#[commands(todo)]
 struct General;
 
 struct Handler;
@@ -43,15 +47,6 @@ async fn main() {
   }
 }
 
-#[derive(Deserialize, Debug)]
-struct Task {
-  id: usize,
-  title: String,
-  description: String,
-  tbd: String,
-  done: bool,
-}
-
 async fn apitest() -> Result<Vec<Task>, reqwest::Error> {
 
   let resp = reqwest::get("http://127.0.0.1:8000/tasks/get").await?;
@@ -64,7 +59,7 @@ async fn apitest() -> Result<Vec<Task>, reqwest::Error> {
 }
 
 #[command]
-async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
+async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
 
   let mut tasks: Vec<Task> = vec![];
 
@@ -73,19 +68,22 @@ async fn ping(ctx: &Context, msg: &Message) -> CommandResult {
     Err(e) => println!("Error: {}", e),
   }
 
+  let mut fields: Vec<(String,String,bool)> = vec![];
   for task in tasks {
-    msg.channel_id.send_message(ctx, |m| m
-      .embed(|e| e
-        .title(task.title)
-        .description(task.description))).await?;
+    let tbd = NaiveDateTime::parse_from_str(&task.tbd,"%Y-%m-%dT%H:%M:%S").unwrap();
+    let tbd_str = tbd.format("%d.%m.%Y").to_string();
+    fields.push((task.title,task.description,true));
+    fields.push((String::from("⠀"),tbd_str,true));
+    fields.push((String::from("⠀"),String::from("⠀"),false));
   }
 
   let mut reply = CreateMessage::default();
   reply
     .embed(|e| e
       .colour(0x00ff00)
-      .title("bre")
-      .description("beans")
+      .title("To-Do")
+      .description("mach mol du bob")
+      .fields(fields)
     );
 
   msg.channel_id.send_message(ctx, |_| { &mut reply }).await?;
