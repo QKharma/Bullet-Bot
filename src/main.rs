@@ -13,8 +13,7 @@ use serenity::framework::standard::{
 
 use std::env;
 
-use chrono::{NaiveDateTime};
-use chrono::format::ParseError;
+use chrono::{offset::TimeZone, DateTime, Local, NaiveDateTime};
 
 mod models;
 use models::task::Task;
@@ -69,20 +68,77 @@ async fn todo(ctx: &Context, msg: &Message) -> CommandResult {
   }
 
   let mut fields: Vec<(String,String,bool)> = vec![];
-  let mut task_string = String::from("");
-  //let mut tbd_str: String = String::from("");
-  for task in tasks {
+  let mut task_string_today = String::from("");
+  let mut task_string_upcoming = String::from("");
+  let mut max_task_length = 0;
+  let mut previous_tbd_str = String::from("");
 
-    //let tbd = NaiveDateTime::parse_from_str(&task.tbd,"%Y-%m-%dT%H:%M:%S").unwrap();
-    //tbd_str = tbd.format("%d.%m.%Y").to_string();
-    
-    task_string.push_str("• ");
-    task_string.push_str(&task.title);
-    task_string.push_str("\n");
+  for task in &tasks {
+    if task.title.len() > max_task_length {
+      max_task_length = task.title.len();
+    }
   }
 
-  fields.push((String::from("Abschnitt"),task_string,true));
-  fields.push((String::from("⠀"),String::from("⠀"),false));
+  println!("{}",max_task_length);
+
+  task_string_upcoming.push_str("```");
+  
+  let mut is_first = true;
+  for task in tasks {
+
+    let now: DateTime<Local> = Local::now();
+    let tbd_naive = NaiveDateTime::parse_from_str(&task.tbd,"%Y-%m-%dT%H:%M:%S").unwrap();
+    let tbd: DateTime<Local> = Local.from_local_datetime(&tbd_naive).unwrap();
+    let tbd_str = tbd.format("%d.%m").to_string();
+
+    let difference = now.signed_duration_since(tbd);
+
+    if difference.num_days() < 1 {
+      task_string_today.push_str("• ");
+      task_string_today.push_str(&task.title);
+      task_string_today.push_str("\n");
+
+    } else {
+      let inp: &str;
+      let mut spaces = max_task_length - task.title.len() + 5;
+      if previous_tbd_str != tbd_str {
+        if ! is_first {
+          task_string_upcoming = String::from(task_string_upcoming.split_at(task_string_upcoming.len()-2).0);
+          task_string_upcoming.push_str("┘");
+          task_string_upcoming.push_str("\n\n");
+        }
+        inp = &tbd_str;
+      } else {
+        spaces += 4;
+        inp = "|";
+      }
+      
+      task_string_upcoming.push_str("• ");
+      task_string_upcoming.push_str(&task.title);
+      for _ in 1..spaces {
+        task_string_upcoming.push_str(" ");
+      }
+      task_string_upcoming.push_str(inp);
+      task_string_upcoming.push_str("\n");
+    }
+
+    previous_tbd_str = tbd_str;
+    is_first = false
+
+  }
+
+  if task_string_today == "" {
+    task_string_today.push_str("-")
+  }
+
+  if task_string_upcoming == "" {
+    task_string_upcoming.push_str("-")
+  }
+
+  task_string_upcoming.push_str("```");
+
+  fields.push((String::from("Today"),task_string_today,true));
+  fields.push((String::from("Upcoming"),task_string_upcoming,false));
 
   let mut reply = CreateMessage::default();
   reply
